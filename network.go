@@ -117,6 +117,14 @@ func (n *Node) handleMessage(msg *Message, conn net.Conn) {
 		n.handleBlockchainResponse(msg)
 	case "peer_discovery":
 		n.handlePeerDiscovery(msg, conn)
+	case "tendermint_proposal":
+		n.handleTendermintProposal(msg)
+	case "tendermint_vote":
+		n.handleTendermintVote(msg)
+	case "validator_info":
+		n.handleValidatorInfo(msg)
+	case "staking_event":
+		n.handleStakingEvent(msg)
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
@@ -421,4 +429,117 @@ func (n *Node) MineBlock() *Block {
 	}
 	
 	return nil
+}
+
+// Tendermint 메시지 핸들러들
+
+// handleTendermintProposal 텐더민트 제안 처리
+func (n *Node) handleTendermintProposal(msg *Message) {
+	// TendermintNode로 타입 캐스팅이 필요한 경우 처리
+	if tn, ok := interface{}(n).(*TendermintNode); ok {
+		proposalData, ok := msg.Data.(map[string]interface{})
+		if !ok {
+			log.Printf("Invalid proposal data")
+			return
+		}
+		
+		// JSON을 통한 변환
+		proposalJSON, _ := json.Marshal(proposalData)
+		var proposal Proposal
+		if err := json.Unmarshal(proposalJSON, &proposal); err != nil {
+			log.Printf("Error unmarshaling proposal: %v", err)
+			return
+		}
+		
+		// 제안 채널로 전송
+		select {
+		case tn.proposalChan <- &proposal:
+		default:
+			log.Printf("Proposal channel full, dropping proposal")
+		}
+	} else {
+		log.Printf("Node is not a TendermintNode, ignoring proposal")
+	}
+}
+
+// handleTendermintVote 텐더민트 투표 처리
+func (n *Node) handleTendermintVote(msg *Message) {
+	if tn, ok := interface{}(n).(*TendermintNode); ok {
+		voteData, ok := msg.Data.(map[string]interface{})
+		if !ok {
+			log.Printf("Invalid vote data")
+			return
+		}
+		
+		// JSON을 통한 변환
+		voteJSON, _ := json.Marshal(voteData)
+		var vote Vote
+		if err := json.Unmarshal(voteJSON, &vote); err != nil {
+			log.Printf("Error unmarshaling vote: %v", err)
+			return
+		}
+		
+		// 투표 채널로 전송
+		select {
+		case tn.voteChan <- &vote:
+		default:
+			log.Printf("Vote channel full, dropping vote")
+		}
+	} else {
+		log.Printf("Node is not a TendermintNode, ignoring vote")
+	}
+}
+
+// handleValidatorInfo 검증자 정보 처리
+func (n *Node) handleValidatorInfo(msg *Message) {
+	validatorData, ok := msg.Data.(map[string]interface{})
+	if !ok {
+		log.Printf("Invalid validator data")
+		return
+	}
+	
+	fmt.Printf("Node %s: Received validator info from %s\n", n.ID, msg.From)
+	// 검증자 정보 처리 로직
+	_ = validatorData
+}
+
+// handleStakingEvent 스테이킹 이벤트 처리
+func (n *Node) handleStakingEvent(msg *Message) {
+	stakingData, ok := msg.Data.(map[string]interface{})
+	if !ok {
+		log.Printf("Invalid staking event data")
+		return
+	}
+	
+	fmt.Printf("Node %s: Received staking event from %s\n", n.ID, msg.From)
+	// 스테이킹 이벤트 처리 로직
+	_ = stakingData
+}
+
+// BroadcastValidatorInfo 검증자 정보 브로드캐스트
+func (n *Node) BroadcastValidatorInfo(validator *Validator) {
+	msg := Message{
+		Type:      "validator_info",
+		From:      n.ID,
+		Data:      validator,
+		Timestamp: uint64(time.Now().Unix()),
+	}
+	
+	n.broadcastToAll(&msg)
+	fmt.Printf("Node %s: Broadcasted validator info to %d peers\n", 
+		n.ID, len(n.Peers))
+}
+
+// BroadcastStakingEvent 스테이킹 이벤트 브로드캐스트
+func (n *Node) BroadcastStakingEvent(event interface{}) {
+	msg := Message{
+		Type:      "staking_event", 
+		From:      n.ID,
+		Data:      event,
+		Timestamp: uint64(time.Now().Unix()),
+	}
+	
+	n.broadcastToAll(&msg)
+	fmt.Printf("Node %s: Broadcasted staking event to %d peers\n",
+		n.ID, len(n.Peers))
 }

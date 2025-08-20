@@ -38,7 +38,7 @@ func Keccak256(data ...[]byte) Hash {
 
 // Transaction represents an Ethereum-like transaction with digital signature
 type Transaction struct {
-	From      string   `json:"from"`      // Address string (derived from public key)
+	From      string   `json:"from"` // Address string (derived from public key)
 	To        string   `json:"to"`
 	Value     *big.Int `json:"value"`
 	Nonce     uint64   `json:"nonce"`
@@ -324,7 +324,7 @@ func (bb *BlockBuilder) executeTransaction(tx *Transaction) (*Receipt, error) {
 		return &Receipt{
 			TxHash:            tx.Hash(),
 			Status:            0, // Failed - invalid signature
-			GasUsed:           0,  // No gas used for invalid signature
+			GasUsed:           0, // No gas used for invalid signature
 			CumulativeGasUsed: bb.gasUsed,
 			Logs:              []Log{},
 		}, fmt.Errorf("invalid transaction signature")
@@ -610,11 +610,12 @@ func main() {
 	fmt.Println("2: P2P 네트워크 데모")
 	fmt.Println("3: 간단한 네트워크 테스트")
 	fmt.Println("4: 디지털 서명 데모")
-	
+	fmt.Println("5: 텐더민트 지분증명 데모")
+
 	var choice int
-	fmt.Print("선택하세요 (1-4): ")
+	fmt.Print("선택하세요 (1-5): ")
 	fmt.Scanf("%d", &choice)
-	
+
 	switch choice {
 	case 1:
 		runBasicDemo()
@@ -624,6 +625,8 @@ func main() {
 		SimpleNetworkTest()
 	case 4:
 		DigitalSignatureDemo()
+	case 5:
+		TendermintProofOfStakeDemo()
 	default:
 		fmt.Println("잘못된 선택입니다. 기본 데모를 실행합니다.")
 		runBasicDemo()
@@ -813,9 +816,9 @@ func NetworkDemo() {
 	genesisBuilder.getOrCreateAccount("alice").Balance = big.NewInt(1000)
 	genesisBuilder.getOrCreateAccount("bob").Balance = big.NewInt(500)
 	genesisBuilder.getOrCreateAccount("charlie").Balance = big.NewInt(300)
-	
+
 	genesisBlock := genesisBuilder.Build()
-	
+
 	// 모든 노드에 제네시스 블록 추가
 	node1.validateAndAddBlock(genesisBlock)
 	node2.validateAndAddBlock(genesisBlock)
@@ -823,7 +826,7 @@ func NetworkDemo() {
 
 	// 5. 트랜잭션 생성 및 브로드캐스트
 	fmt.Println("5. 트랜잭션 생성 및 네트워크 전파...")
-	
+
 	tx1 := &Transaction{
 		From:     "alice",
 		To:       "bob",
@@ -847,7 +850,7 @@ func NetworkDemo() {
 	// Alice가 트랜잭션 브로드캐스트
 	node1.BroadcastTransaction(tx1)
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Bob이 트랜잭션 브로드캐스트
 	node2.BroadcastTransaction(tx2)
 	time.Sleep(100 * time.Millisecond)
@@ -875,7 +878,7 @@ func NetworkDemo() {
 
 	// 9. 추가 트랜잭션으로 네트워크 테스트
 	fmt.Println("9. 추가 트랜잭션 테스트...")
-	
+
 	tx3 := &Transaction{
 		From:     "charlie",
 		To:       "alice",
@@ -900,17 +903,17 @@ func NetworkDemo() {
 
 	// 11. 최종 상태 확인
 	fmt.Println("11. 최종 네트워크 상태:")
-	fmt.Printf("   Alice: %d 블록, %d 멤풀, %d 피어\n", 
+	fmt.Printf("   Alice: %d 블록, %d 멤풀, %d 피어\n",
 		node1.GetBlockchainLength(), node1.GetMempoolSize(), len(node1.Peers))
-	fmt.Printf("   Bob: %d 블록, %d 멤풀, %d 피어\n", 
+	fmt.Printf("   Bob: %d 블록, %d 멤풀, %d 피어\n",
 		node2.GetBlockchainLength(), node2.GetMempoolSize(), len(node2.Peers))
-	fmt.Printf("   Charlie: %d 블록, %d 멤풀, %d 피어\n", 
+	fmt.Printf("   Charlie: %d 블록, %d 멤풀, %d 피어\n",
 		node3.GetBlockchainLength(), node3.GetMempoolSize(), len(node3.Peers))
 
 	// 12. 성능 테스트
 	fmt.Println("12. 네트워크 성능 테스트...")
 	start := time.Now()
-	
+
 	// 10개 트랜잭션 동시 전송
 	for i := 0; i < 10; i++ {
 		tx := &Transaction{
@@ -924,13 +927,13 @@ func NetworkDemo() {
 		}
 		node1.BroadcastTransaction(tx)
 	}
-	
+
 	// 블록 마이닝
 	testBlock := node2.MineBlock()
 	if testBlock != nil {
 		node2.BroadcastBlock(testBlock)
 	}
-	
+
 	duration := time.Since(start)
 	fmt.Printf("   10개 트랜잭션 처리 시간: %v\n", duration)
 
@@ -993,7 +996,7 @@ func DigitalSignatureDemo() {
 	// 1. 지갑 생성
 	fmt.Println("1. 지갑 생성 중...")
 	keyManager := NewKeyManager()
-	
+
 	aliceWallet, _ := keyManager.CreateWallet("alice")
 	bobWallet, _ := keyManager.CreateWallet("bob")
 	charlieWallet, _ := keyManager.CreateWallet("charlie")
@@ -1005,14 +1008,14 @@ func DigitalSignatureDemo() {
 	// 2. 블록 빌더 생성 및 초기 잔액 설정
 	fmt.Println("\n2. 초기 계정 설정...")
 	builder := NewBlockBuilder(1, Hash{})
-	
+
 	// 지갑 주소로 계정 생성
 	aliceAccount := builder.getOrCreateAccount(string(aliceWallet.Address))
 	bobAccount := builder.getOrCreateAccount(string(bobWallet.Address))
 	charlieAccount := builder.getOrCreateAccount(string(charlieWallet.Address))
-	
-	aliceAccount.Balance = big.NewInt(1000000000000000000) // 1 ETH in wei
-	bobAccount.Balance = big.NewInt(500000000000000000)   // 0.5 ETH
+
+	aliceAccount.Balance = big.NewInt(1000000000000000000)  // 1 ETH in wei
+	bobAccount.Balance = big.NewInt(500000000000000000)     // 0.5 ETH
 	charlieAccount.Balance = big.NewInt(200000000000000000) // 0.2 ETH
 
 	fmt.Printf("Alice 초기 잔액: %s\n", aliceAccount.Balance.String())
@@ -1021,7 +1024,7 @@ func DigitalSignatureDemo() {
 
 	// 3. 서명된 트랜잭션 생성
 	fmt.Println("\n3. 서명된 트랜잭션 생성...")
-	
+
 	// Alice -> Bob 0.1 ETH 전송
 	tx1 := &Transaction{
 		From:     string(aliceWallet.Address),
@@ -1032,7 +1035,7 @@ func DigitalSignatureDemo() {
 		GasLimit: 21000,
 		Data:     []byte{},
 	}
-	
+
 	err := aliceWallet.SignTransaction(tx1)
 	if err != nil {
 		fmt.Printf("Alice 트랜잭션 서명 실패: %v\n", err)
@@ -1040,7 +1043,7 @@ func DigitalSignatureDemo() {
 	}
 	fmt.Println("✓ Alice가 트랜잭션에 서명 완료")
 
-	// Bob -> Charlie 0.05 ETH 전송 
+	// Bob -> Charlie 0.05 ETH 전송
 	tx2 := &Transaction{
 		From:     string(bobWallet.Address),
 		To:       string(charlieWallet.Address),
@@ -1050,7 +1053,7 @@ func DigitalSignatureDemo() {
 		GasLimit: 21000,
 		Data:     []byte{},
 	}
-	
+
 	err = bobWallet.SignTransaction(tx2)
 	if err != nil {
 		fmt.Printf("Bob 트랜잭션 서명 실패: %v\n", err)
@@ -1079,7 +1082,7 @@ func DigitalSignatureDemo() {
 
 	// 6. 트랜잭션 실행
 	fmt.Println("\n6. 트랜잭션 실행...")
-	
+
 	receipt1, err := builder.executeTransaction(tx1)
 	if err != nil {
 		fmt.Printf("Alice 트랜잭션 실행 실패: %v\n", err)
@@ -1113,7 +1116,7 @@ func DigitalSignatureDemo() {
 	builder.AddTransaction(tx1)
 	builder.AddTransaction(tx2)
 	// 가짜 트랜잭션은 추가하지 않음 (서명 검증 실패로 거부됨)
-	
+
 	block := builder.Build()
 	fmt.Printf("블록 #%d 생성 완료\n", block.Number)
 	fmt.Printf("  포함된 트랜잭션: %d개\n", len(block.Transactions))
@@ -1128,4 +1131,259 @@ func DigitalSignatureDemo() {
 	fmt.Println("✓ 중복 방지: Nonce로 재전송 공격 방지")
 
 	fmt.Println("\n=== 디지털 서명 데모 완료 ===")
+}
+
+// TendermintProofOfStakeDemo 텐더민트 지분증명 데모
+func TendermintProofOfStakeDemo() {
+	fmt.Println("=== 텐더민트 지분증명 블록체인 데모 ===\n")
+
+	// 1. 텐더민트 노드들 생성
+	fmt.Println("1. 텐더민트 노드들 생성 중...")
+	node1 := NewTendermintNode("Validator1", "localhost", 7001)
+	node2 := NewTendermintNode("Validator2", "localhost", 7002)
+	node3 := NewTendermintNode("Validator3", "localhost", 7003)
+	node4 := NewTendermintNode("Observer", "localhost", 7004) // 관찰자 노드
+
+	// 2. 노드들 시작
+	fmt.Println("2. 노드들 시작...")
+	node1.Start()
+	node2.Start()
+	node3.Start()
+	node4.Start()
+
+	time.Sleep(200 * time.Millisecond)
+
+	// 3. 네트워크 연결
+	fmt.Println("3. P2P 네트워크 형성...")
+	node1.ConnectToPeer("localhost:7002")
+	node1.ConnectToPeer("localhost:7003")
+	node1.ConnectToPeer("localhost:7004")
+	node2.ConnectToPeer("localhost:7003")
+	node2.ConnectToPeer("localhost:7004")
+	node3.ConnectToPeer("localhost:7004")
+
+	time.Sleep(200 * time.Millisecond)
+
+	// 4. 검증자 등록 (스테이킹)
+	fmt.Println("4. 검증자들 등록...")
+
+	// 검증자1: 1000 토큰 스테이킹, 수수료 5%
+	err := node1.BecomeValidator(big.NewInt(1000), big.NewInt(5))
+	if err != nil {
+		fmt.Printf("Node1 검증자 등록 실패: %v\n", err)
+		return
+	}
+
+	// 검증자2: 800 토큰 스테이킹, 수수료 3%
+	err = node2.BecomeValidator(big.NewInt(800), big.NewInt(3))
+	if err != nil {
+		fmt.Printf("Node2 검증자 등록 실패: %v\n", err)
+		return
+	}
+
+	// 검증자3: 600 토큰 스테이킹, 수수료 7%
+	err = node3.BecomeValidator(big.NewInt(600), big.NewInt(7))
+	if err != nil {
+		fmt.Printf("Node3 검증자 등록 실패: %v\n", err)
+		return
+	}
+
+	time.Sleep(300 * time.Millisecond)
+
+	// 5. 검증자 집합 출력
+	fmt.Println("5. 활성 검증자 집합:")
+	validators := node1.StakingSystem.GetActiveValidators()
+	for i, validator := range validators.Validators {
+		fmt.Printf("   검증자 %d: %s (스테이크: %s)\n",
+			i+1, validator.Address, validator.Stake.String())
+	}
+
+	// 6. 합의 프로세스 시작
+	fmt.Println("6. 텐더민트 합의 프로세스 시작...")
+	node1.StartTendermintConsensus()
+	node2.StartTendermintConsensus()
+	node3.StartTendermintConsensus()
+
+	time.Sleep(500 * time.Millisecond)
+
+	// 7. 트랜잭션 생성 및 전파
+	fmt.Println("7. 트랜잭션 생성 및 전파...")
+
+	// 지갑들 생성
+	keyManager := NewKeyManager()
+	aliceWallet, _ := keyManager.CreateWallet("alice")
+	bobWallet, _ := keyManager.CreateWallet("bob")
+
+	// 서명된 트랜잭션들 생성
+	tx1 := &Transaction{
+		From:     string(aliceWallet.Address),
+		To:       string(bobWallet.Address),
+		Value:    big.NewInt(100),
+		Nonce:    0,
+		GasPrice: big.NewInt(20000000000),
+		GasLimit: 21000,
+		Data:     []byte("tendermint tx1"),
+	}
+	aliceWallet.SignTransaction(tx1)
+
+	tx2 := &Transaction{
+		From:     string(bobWallet.Address),
+		To:       string(aliceWallet.Address),
+		Value:    big.NewInt(50),
+		Nonce:    0,
+		GasPrice: big.NewInt(25000000000),
+		GasLimit: 21000,
+		Data:     []byte("tendermint tx2"),
+	}
+	bobWallet.SignTransaction(tx2)
+
+	// 트랜잭션 브로드캐스트
+	node1.BroadcastTransaction(tx1)
+	time.Sleep(100 * time.Millisecond)
+	node2.BroadcastTransaction(tx2)
+	time.Sleep(200 * time.Millisecond)
+
+	// 8. 합의 과정 관찰
+	fmt.Println("8. 합의 과정 관찰 (5초간)...")
+
+	start := time.Now()
+	for time.Since(start) < 5*time.Second {
+		// 각 노드의 상태 출력
+		height1, round1, step1 := node1.ConsensusState.GetState()
+		height2, round2, step2 := node2.ConsensusState.GetState()
+		height3, round3, step3 := node3.ConsensusState.GetState()
+
+		fmt.Printf("   Node1: 높이=%d, 라운드=%d, 단계=%d | Node2: 높이=%d, 라운드=%d, 단계=%d | Node3: 높이=%d, 라운드=%d, 단계=%d\n",
+			height1, round1, step1, height2, round2, step2, height3, round3, step3)
+
+		time.Sleep(1 * time.Second)
+	}
+
+	// 9. 최종 블록체인 상태
+	fmt.Println("9. 최종 블록체인 상태:")
+	fmt.Printf("   Node1 블록체인 길이: %d\n", node1.GetBlockchainLength())
+	fmt.Printf("   Node2 블록체인 길이: %d\n", node2.GetBlockchainLength())
+	fmt.Printf("   Node3 블록체인 길이: %d\n", node3.GetBlockchainLength())
+	fmt.Printf("   Observer 블록체인 길이: %d\n", node4.GetBlockchainLength())
+
+	// 10. 스테이킹 보상 확인
+	fmt.Println("10. 스테이킹 보상 현황:")
+	for _, validator := range validators.Validators {
+		candidate := node1.StakingSystem.GetValidatorInfo(validator.Address)
+		if candidate != nil {
+			fmt.Printf("   검증자 %s: 총 스테이크=%s, 위임=%s, 활성=%t\n",
+				validator.Address, candidate.TotalStake.String(),
+				candidate.DelegatedStake.String(), candidate.Active)
+		}
+	}
+
+	// 11. 위임 테스트
+	fmt.Println("11. 스테이크 위임 테스트...")
+	delegatorWallet, _ := keyManager.CreateWallet("delegator")
+
+	// 위임자가 검증자1에게 200 토큰 위임
+	err = node1.StakingSystem.DelegateStake(
+		delegatorWallet.Address,
+		node1.ValidatorKey.Address,
+		big.NewInt(200),
+	)
+	if err != nil {
+		fmt.Printf("위임 실패: %v\n", err)
+	} else {
+		fmt.Printf("위임 성공: 위임자 %s가 검증자 %s에게 200 토큰 위임\n",
+			delegatorWallet.Address, node1.ValidatorKey.Address)
+	}
+
+	// 12. 슬래싱 테스트 (시뮬레이션)
+	fmt.Println("12. 슬래싱 시뮬레이션...")
+	err = node1.StakingSystem.SlashValidator(
+		node3.ValidatorKey.Address,
+		SlashDoubleSign,
+		1,
+	)
+	if err != nil {
+		fmt.Printf("슬래싱 실패: %v\n", err)
+	} else {
+		fmt.Printf("검증자 %s 슬래싱 완료\n", node3.ValidatorKey.Address)
+	}
+
+	// 13. 검증자 집합 업데이트
+	fmt.Println("13. 검증자 집합 업데이트...")
+	updatedValidators := node1.StakingSystem.UpdateValidatorSet()
+	fmt.Printf("업데이트된 활성 검증자 수: %d\n", len(updatedValidators.Validators))
+
+	for i, validator := range updatedValidators.Validators {
+		fmt.Printf("   검증자 %d: %s (스테이크: %s)\n",
+			i+1, validator.Address, validator.Stake.String())
+	}
+
+	// 14. 성능 테스트
+	fmt.Println("14. 텐더민트 성능 테스트...")
+
+	// 다수의 트랜잭션 생성
+	fmt.Println("20개 트랜잭션 동시 전송...")
+	performanceStart := time.Now()
+
+	for i := 0; i < 20; i++ {
+		tx := &Transaction{
+			From:     string(aliceWallet.Address),
+			To:       string(bobWallet.Address),
+			Value:    big.NewInt(int64(i + 1)),
+			Nonce:    uint64(i + 10),
+			GasPrice: big.NewInt(20000000000),
+			GasLimit: 21000,
+			Data:     []byte(fmt.Sprintf("perf_tx_%d", i)),
+		}
+		aliceWallet.SignTransaction(tx)
+
+		// 라운드 로빈으로 노드들에게 전송
+		switch i % 3 {
+		case 0:
+			node1.BroadcastTransaction(tx)
+		case 1:
+			node2.BroadcastTransaction(tx)
+		case 2:
+			node3.BroadcastTransaction(tx)
+		}
+	}
+
+	// 처리 시간 측정 (간소화)
+	time.Sleep(3 * time.Second)
+	performanceDuration := time.Since(performanceStart)
+
+	fmt.Printf("성능 테스트 완료: 20개 트랜잭션 처리 시간 %v\n", performanceDuration)
+
+	// 15. 언본딩 테스트
+	fmt.Println("15. 언본딩 테스트...")
+	err = node1.StakingSystem.UndelegateStake(
+		delegatorWallet.Address,
+		node1.ValidatorKey.Address,
+		big.NewInt(100), // 200 중에서 100 언본딩
+	)
+	if err != nil {
+		fmt.Printf("언본딩 실패: %v\n", err)
+	} else {
+		fmt.Printf("언본딩 시작: 100 토큰 (21일 언본딩 기간)\n")
+	}
+
+	// 16. 정리
+	fmt.Println("16. 노드들 종료...")
+	time.Sleep(500 * time.Millisecond)
+
+	node1.Stop()
+	node2.Stop()
+	node3.Stop()
+	node4.Stop()
+
+	// 17. 텐더민트 특징 요약
+	fmt.Println("17. 텐더민트 지분증명 특징:")
+	fmt.Println("✓ 즉시 확정성: 2/3 과반수 합의 시 블록 즉시 확정")
+	fmt.Println("✓ 비잔틴 장애 허용: 1/3 미만의 악의적 노드 허용")
+	fmt.Println("✓ 에너지 효율성: 작업증명 대비 극도로 낮은 에너지 소비")
+	fmt.Println("✓ 스테이킹 보상: 검증자와 위임자에게 블록 보상 배분")
+	fmt.Println("✓ 슬래싱: 악의적 행위에 대한 경제적 처벌")
+	fmt.Println("✓ 위임: 토큰 보유자가 검증자에게 위임 가능")
+	fmt.Println("✓ 거버넌스: 스테이크 기반 온체인 거버넌스")
+
+	fmt.Println("\n=== 텐더민트 지분증명 데모 완료 ===")
 }
